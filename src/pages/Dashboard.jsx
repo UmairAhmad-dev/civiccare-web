@@ -5,10 +5,11 @@ import {
   MapPin, Camera, Target, CheckCircle2, Clock, 
   LogOut, X, Sparkles, Menu, Edit3, ShieldCheck, Calendar, 
   Map, BarChart3, BrainCircuit, Eye, MessageSquare, AlertTriangle, Zap, Star,
-  Trash2, User, Phone // Kept required icons
+  Trash2, User, Phone, ClipboardList, PhoneCall // Added PhoneCall icon
 } from 'lucide-react';
 import ComplaintModal from './ComplaintModal'; 
-import Navbar from '../components/Navbar'; // <-- IMPORT THE NEW NAVBAR
+import Navbar from '../components/Navbar'; 
+import ResidentPortal from '../components/ResidentPortal'; 
 
 const Skeleton = ({ className }) => (
   <div className={`animate-pulse bg-slate-200/70 rounded-2xl ${className}`}></div>
@@ -140,31 +141,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleRateService = async (complaintId, ratingValue) => {
-    const token = localStorage.getItem('token');
-    try {
-      setComplaints(complaints.map(c => c.id === complaintId ? { ...c, citizenRating: ratingValue } : c));
-      
-      const res = await fetch(`http://localhost:5000/api/citizen/complaints/${complaintId}/rate`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ rating: ratingValue, review: "Satisfied with resolution." })
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        showToast("Thank you for your feedback!");
-      } else {
-        throw new Error();
-      }
-    } catch (err) {
-      showToast("Failed to save rating.", "error");
-      setComplaints(complaints.map(c => c.id === complaintId ? { ...c, citizenRating: null } : c));
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -178,6 +154,7 @@ const Dashboard = () => {
         { name: 'Home', icon: LayoutDashboard },
         { name: 'My Complaints', icon: FileText },
         { name: 'Notifications', icon: Bell },
+        { name: 'Resident Portal', icon: ClipboardList }, 
         { name: 'SOS Emergency', icon: ShieldAlert },
         { name: 'AI Chatbot', icon: MessageSquare },
       ]
@@ -232,7 +209,6 @@ const Dashboard = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-[#0066FF] to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
-            {/* Added dashboard route link instead of GitHub */}
             <a href="/dashboard" className="hover:opacity-80 transition-opacity">
               <h2 className="text-2xl font-black text-white tracking-tight">CIVICCARE<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-cyan-400">.AI</span></h2>
             </a>
@@ -244,7 +220,7 @@ const Dashboard = () => {
               <nav className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeTab === item.name;
+                  const isActive = activeTab === item.name || (activeTab === 'Profile' && item.name === 'Resident Portal');
                   return (
                     <button
                       key={item.name}
@@ -275,7 +251,6 @@ const Dashboard = () => {
       <div className="md:hidden w-full bg-[#060D1E] text-white p-4 flex justify-between items-center sticky top-0 z-40 border-b border-slate-800 shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#0066FF] flex items-center justify-center font-black">C</div>
-          {/* Added dashboard route link for mobile header as well */}
           <a href="/dashboard" className="hover:opacity-85 transition-opacity">
             <span className="font-black text-lg tracking-wider">CIVICCARE.AI</span>
           </a>
@@ -289,7 +264,6 @@ const Dashboard = () => {
 
       <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[#F4F7FB]">
         
-        {/* === INJECTED GLOBAL NAVBAR COMPONENT === */}
         <Navbar 
           userData={userData} 
           isLoadingProfile={isLoadingProfile} 
@@ -483,113 +457,51 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* ================= PROFILE TAB ================= */}
-              {activeTab === 'Profile' && (
-                 <div className="space-y-8">
-                 <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 bg-white/50 backdrop-blur-md p-6 rounded-[2rem] border border-white/60 shadow-sm">
-                   <div>
-                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 font-black text-[10px] uppercase tracking-widest mb-3">
-                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Digital Identity
-                     </div>
-                     <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Citizen Profile</h1>
-                     <p className="text-slate-500 mt-1 text-sm font-medium">Your centralized municipal record securely stored on the blockchain-ready ledger.</p>
-                   </div>
-                   <button onClick={() => window.location.href = '/profile-setup'} className="group flex items-center gap-2 bg-white text-slate-700 px-6 py-3.5 rounded-2xl font-black border border-slate-200 shadow-sm hover:border-[#0066FF] hover:text-[#0066FF] hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer text-sm">
-                     <Edit3 className="w-4 h-4 transition-transform group-hover:rotate-12"/> Update Records
-                   </button>
-                 </header>
-   
-                 {isLoadingProfile ? (
-                   <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 h-96 flex flex-col items-center justify-center space-y-4">
-                     <Skeleton className="w-32 h-32 rounded-full" />
-                     <Skeleton className="w-48 h-6" />
-                     <Skeleton className="w-32 h-4" />
-                   </div>
-                 ) : (
-                   <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative">
-                     <div className="h-48 relative overflow-hidden bg-[#060D1E]">
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#0066FF] via-indigo-600 to-cyan-500 opacity-90"></div>
-                     </div>
-   
-                     <div className="px-8 lg:px-12 pb-8 relative flex flex-col md:flex-row justify-between items-start md:items-end -mt-20 gap-6">
-                       <div className="flex flex-col md:flex-row items-center md:items-end gap-6 w-full">
-                         <div className="relative group cursor-default">
-                           <div className="w-40 h-40 bg-white rounded-full border-[6px] border-white shadow-2xl overflow-hidden relative z-10">
-                             <img src={userData?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.fullName || 'Citizen'}`} alt="Profile" className="w-full h-full object-cover bg-slate-100" />
-                           </div>
-                           {userData?.cnic && (
-                             <div className="absolute bottom-2 right-2 bg-emerald-500 p-2 rounded-full border-4 border-white z-20 shadow-lg" title="Verified Identity">
-                               <CheckCircle2 className="w-5 h-5 text-white" />
-                             </div>
-                           )}
-                         </div>
-                         <div className="pb-3 text-center md:text-left flex-1">
-                           <h2 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight mb-2">{userData?.fullName || 'N/A'}</h2>
-                           <p className="text-[#0066FF] font-black text-sm uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
-                             <ShieldCheck className="w-5 h-5" /> {userData?.accountType || 'Citizen Account'}
-                           </p>
-                         </div>
-                       </div>
-                     </div>
-   
-                     <div className="px-8 lg:px-12 pb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                       <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all">
-                         <div className="flex items-center gap-3 mb-6">
-                           <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl"><User size={20}/></div>
-                           <h3 className="font-black text-slate-800">Official Identity</h3>
-                         </div>
-                         <div className="space-y-4">
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">CNIC Number</p>
-                             <p className="font-bold text-slate-700">{userData?.cnic || 'Not provided'}</p>
-                           </div>
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date of Birth</p>
-                             <p className="font-bold text-slate-700">{userData?.dob ? new Date(userData.dob).toLocaleDateString() : 'Not provided'}</p>
-                           </div>
-                         </div>
-                       </div>
+              {/* ================= SOS EMERGENCY TAB ================= */}
+              {activeTab === 'SOS Emergency' && (
+                <div className="space-y-6">
+                  <div className="p-8 rounded-[2.5rem] bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden">
+                    <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="p-4 bg-white/20 rounded-[1.5rem] backdrop-blur-md border border-white/20 z-10">
+                      <ShieldAlert size={40} className="text-white" />
+                    </div>
+                    <div className="z-10">
+                      <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-1">Emergency Response Hub</h2>
+                      <p className="text-red-50 text-sm font-medium">One-touch direct dialing lines for police and medical rescue.</p>
+                    </div>
+                  </div>
 
-                       <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all">
-                         <div className="flex items-center gap-3 mb-6">
-                           <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl"><Phone size={20}/></div>
-                           <h3 className="font-black text-slate-800">Contact Details</h3>
-                         </div>
-                         <div className="space-y-4">
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email Address</p>
-                             <p className="font-bold text-slate-700 break-all">{userData?.email || 'Not provided'}</p>
-                           </div>
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mobile Network</p>
-                             <p className="font-bold text-slate-700">{userData?.phone || 'Not provided'}</p>
-                           </div>
-                         </div>
-                       </div>
-
-                       <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all lg:col-span-2 xl:col-span-1">
-                         <div className="flex items-center gap-3 mb-6">
-                           <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><MapPin size={20}/></div>
-                           <h3 className="font-black text-slate-800">Registered Address</h3>
-                         </div>
-                         <div className="space-y-4">
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Province / District</p>
-                             <p className="font-bold text-slate-700">{userData?.province || 'N/A'}, {userData?.district || 'N/A'}</p>
-                           </div>
-                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Complete Postal Address</p>
-                             <p className="font-bold text-slate-700">{userData?.address || 'Not provided'}</p>
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 )}
-               </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 pt-2">
+                    {[
+                      { title: 'Police', number: '15', icon: PhoneCall, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                      { title: 'Ambulance', number: '115', icon: PhoneCall, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+                      { title: 'Fire Brigade', number: '16', icon: PhoneCall, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
+                      { title: 'Security', number: '+92300', icon: PhoneCall, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+                    ].map((sos, idx) => (
+                      <div key={idx} className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-sm flex items-center gap-5 hover:shadow-lg transition-all duration-300 group cursor-pointer">
+                        <div className={`p-4 rounded-2xl ${sos.bg} ${sos.color} border ${sos.border} group-hover:scale-110 transition-transform shadow-sm`}>
+                          <sos.icon size={28} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-slate-800">{sos.title}</h3>
+                          <p className="text-slate-500 font-bold text-sm mt-0.5">Line: {sos.number}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
-              {['AI Chatbot', 'SOS Emergency', 'Notifications', 'NLP Text Routing', 'Damage Detection (CV)', 'Priority Prediction', 'Fake/Duplicate Detect', 'Resolution Estimator', 'Complaint Heatmap', 'Department Tracking'].includes(activeTab) && (
+              {/* ================= RESIDENT PORTAL INTEGRATION ================= */}
+              {(activeTab === 'Resident Portal' || activeTab === 'Profile') && (
+                <ResidentPortal 
+                  userData={userData} 
+                  isLoadingProfile={isLoadingProfile} 
+                  requestedView={activeTab === 'Profile' ? 'profile' : 'grid'} 
+                />
+              )}
+
+              {['AI Chatbot', 'Notifications', 'NLP Text Routing', 'Damage Detection (CV)', 'Priority Prediction', 'Fake/Duplicate Detect', 'Resolution Estimator', 'Complaint Heatmap', 'Department Tracking'].includes(activeTab) && (
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
                   <div className="w-20 h-20 bg-slate-200/50 text-slate-400 rounded-full flex items-center justify-center">
                     <ShieldCheck size={36} />
