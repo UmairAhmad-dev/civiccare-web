@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FileText, ShieldAlert, Bell, Plus, 
   MapPin, Camera, Target, CheckCircle2, Clock, 
-  LogOut, X, Sparkles, Menu, Edit3, ShieldCheck, Calendar, 
-  Map, BarChart3, BrainCircuit, Eye, MessageSquare, AlertTriangle, Zap, Star,
-  Trash2, User, Phone, ClipboardList, PhoneCall // Added PhoneCall icon
+  LogOut, X, Sparkles, Menu, ShieldCheck, Calendar, 
+  Map, BarChart3, BrainCircuit, Eye, MessageSquare, AlertTriangle, Zap,
+  Trash2, ClipboardList, Megaphone, Briefcase
 } from 'lucide-react';
-import ComplaintModal from './ComplaintModal'; 
+import ComplaintModal from '../components/ComplaintModal'; 
 import Navbar from '../components/Navbar'; 
 import ResidentPortal from '../components/ResidentPortal'; 
+import InformationCenter from '../components/InformationCenter';
+import CitizenServices from '../components/CitizenServices';
 
 const Skeleton = ({ className }) => (
   <div className={`animate-pulse bg-slate-200/70 rounded-2xl ${className}`}></div>
@@ -35,70 +37,70 @@ const Dashboard = () => {
 
   const [toasts, setToasts] = useState([]);
   const showToast = (msg, type = 'success') => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, msg, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      const userStr = localStorage.getItem('user');
-      const token = localStorage.getItem('token');
-      
-      if (!userStr || !token) {
-        window.location.href = '/login';
-        return;
-      }
-
-      const localUser = JSON.parse(userStr);
-      const userId = localUser.id || localUser._id;
-
-      try {
-        const profileRes = await fetch(`http://localhost:5000/api/profile/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setUserData({
-            ...profileData,
-            fullName: profileData.fullName || profileData.fullname || profileData.full_name,
-            fatherName: profileData.fatherName || profileData.fathername || profileData.father_name,
-            cnic: profileData.cnic || profileData.CNIC,
-            dob: profileData.dob || profileData.DOB,
-            profilePicture: profileData.profilePicture || profileData.profile_picture
-          });
-        } else {
-          setUserData(localUser);
-        }
-
-        const statsRes = await fetch(`http://localhost:5000/api/citizen/dashboard/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          if (statsData.success) setDashboardStats(statsData.data.stats);
-        }
-
-        const complaintsRes = await fetch(`http://localhost:5000/api/citizen/complaints`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (complaintsRes.ok) {
-          const complaintsData = await complaintsRes.json();
-          if (complaintsData.success) setComplaints(complaintsData.data);
-        }
-
-      } catch (e) {
-        console.error("Failed to fetch backend data", e);
-        setUserData(localUser);
-        showToast("Network error while syncing data.", "error");
-      } finally {
-        setTimeout(() => setIsLoadingProfile(false), 800);
-      }
-    };
-
     fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    const userStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    
+    if (!userStr || !token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const localUser = JSON.parse(userStr);
+    const userId = localUser.id || localUser._id;
+
+    try {
+      const profileRes = await fetch(`http://localhost:5000/api/profile/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setUserData({
+          ...profileData,
+          fullName: profileData.fullName || profileData.fullname || profileData.full_name,
+          fatherName: profileData.fatherName || profileData.fathername || profileData.father_name,
+          cnic: profileData.cnic || profileData.CNIC,
+          dob: profileData.dob || profileData.DOB,
+          profilePicture: profileData.profilePicture || profileData.profile_picture
+        });
+      } else {
+        setUserData(localUser);
+      }
+
+      const statsRes = await fetch(`http://localhost:5000/api/citizen/dashboard/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        if (statsData.success) setDashboardStats(statsData.data.stats);
+      }
+
+      const complaintsRes = await fetch(`http://localhost:5000/api/citizen/complaints`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (complaintsRes.ok) {
+        const complaintsData = await complaintsRes.json();
+        if (complaintsData.success) setComplaints(complaintsData.data);
+      }
+
+    } catch (e) {
+      console.error("Failed to fetch backend data", e);
+      setUserData(localUser);
+      showToast("Network error while syncing data.", "error");
+    } finally {
+      setTimeout(() => setIsLoadingProfile(false), 800);
+    }
+  };
 
   const handleComplaintSubmitted = (newTicket) => {
     setComplaints([newTicket, ...complaints]);
@@ -129,7 +131,7 @@ const Dashboard = () => {
         setDashboardStats(prev => ({
           ...prev,
           totalLogged: Math.max(0, prev.totalLogged - 1),
-          inProgress: status === 'In Progress' || status === 'Open' ? Math.max(0, prev.inProgress - 1) : prev.inProgress,
+          inProgress: status === 'In Progress' || status === 'Open' || status === 'Assigned' ? Math.max(0, prev.inProgress - 1) : prev.inProgress,
           resolved: status === 'Resolved' ? Math.max(0, prev.resolved - 1) : prev.resolved,
         }));
       } else {
@@ -147,12 +149,24 @@ const Dashboard = () => {
     window.location.href = '/login';
   };
 
+  const getStageIndex = (status) => {
+    switch (status) {
+      case 'Open': return 0;
+      case 'Assigned': return 1;
+      case 'In Progress': return 2;
+      case 'Resolved': return 3;
+      default: return 0;
+    }
+  };
+
   const sidebarMenu = [
     {
       title: "Citizen Services",
       items: [
         { name: 'Home', icon: LayoutDashboard },
+        { name: 'Citizen Services', icon: Briefcase },
         { name: 'My Complaints', icon: FileText },
+        { name: 'Information Center', icon: Megaphone },
         { name: 'Notifications', icon: Bell },
         { name: 'Resident Portal', icon: ClipboardList }, 
         { name: 'SOS Emergency', icon: ShieldAlert },
@@ -181,6 +195,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col md:flex-row overflow-x-hidden selection:bg-blue-600 selection:text-white">
       
+      {/* Toast Notifications */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map(toast => (
@@ -202,6 +217,7 @@ const Dashboard = () => {
         </AnimatePresence>
       </div>
 
+      {/* Sidebar Navigation */}
       <aside className="w-72 bg-[#060D1E] text-slate-300 hidden md:flex flex-col justify-between border-r border-slate-800 shrink-0 select-none shadow-2xl relative h-screen overflow-y-auto custom-scrollbar">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <div className="relative z-10 space-y-6 p-6">
@@ -225,7 +241,7 @@ const Dashboard = () => {
                     <button
                       key={item.name}
                       onClick={() => setActiveTab(item.name)}
-                      className={`flex items-center gap-3 w-full p-3.5 rounded-xl transition-all duration-300 ${
+                      className={`flex items-center gap-3 w-full p-3.5 rounded-xl transition-all duration-300 cursor-pointer ${
                         isActive 
                           ? 'bg-gradient-to-r from-[#0066FF] to-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 translate-x-2' 
                           : 'text-slate-400 hover:bg-slate-800/50 hover:text-white hover:translate-x-1'
@@ -242,12 +258,13 @@ const Dashboard = () => {
         </div>
 
         <div className="relative z-10 p-6 pt-4 border-t border-slate-800/80 bg-[#060D1E] sticky bottom-0">
-          <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-colors w-full p-3 rounded-xl hover:bg-red-500/10 font-medium group">
+          <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-colors w-full p-3 rounded-xl hover:bg-red-500/10 font-medium group cursor-pointer">
             <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> Secure Logout
           </button>
         </div>
       </aside>
 
+      {/* Mobile Navbar */}
       <div className="md:hidden w-full bg-[#060D1E] text-white p-4 flex justify-between items-center sticky top-0 z-40 border-b border-slate-800 shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#0066FF] flex items-center justify-center font-black">C</div>
@@ -262,6 +279,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[#F4F7FB]">
         
         <Navbar 
@@ -294,7 +312,6 @@ const Dashboard = () => {
                         <div className="space-y-3">
                           <Skeleton className="w-3/4 h-10 bg-white/20" />
                           <Skeleton className="w-full h-4 bg-white/20" />
-                          <Skeleton className="w-2/3 h-4 bg-white/20" />
                         </div>
                       ) : (
                         <>
@@ -357,12 +374,14 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* ================= MY COMPLAINTS TAB ================= */}
+              {/* CITIZEN SERVICES */}
+              {activeTab === 'Citizen Services' && <CitizenServices />}
+
+              {/* MY COMPLAINTS TAB */}
               {activeTab === 'My Complaints' && (
                 <div className="space-y-6">
                   <div className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-[2.5rem] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
-                    <div className="z-10">
+                    <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">Complaint Tracking Hub</h2>
                       <p className="text-slate-500 text-sm font-medium mt-1">Review live ticket statuses and visual progress timelines.</p>
                     </div>
@@ -379,19 +398,17 @@ const Dashboard = () => {
                       [1, 2, 3].map((n) => (
                         <div key={n} className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-sm space-y-4">
                           <div className="flex justify-between"><Skeleton className="w-32 h-6" /><Skeleton className="w-20 h-6" /></div>
-                          <Skeleton className="w-full h-4" />
-                          <Skeleton className="w-1/2 h-4" />
                         </div>
                       ))
                     ) : complaints.length === 0 ? (
-                      <div className="text-center py-16 bg-white border border-dashed border-slate-300 rounded-[2.5rem] flex flex-col items-center justify-center">
-                         <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mb-4 border border-slate-100"><FileText size={36} /></div>
-                         <h3 className="text-xl font-black text-slate-800 mb-2">No tickets found</h3>
+                      <div className="text-center py-16 bg-white border border-dashed border-slate-300 rounded-[2.5rem]">
+                         <FileText size={36} className="mx-auto text-slate-300 mb-2" />
+                         <h3 className="text-xl font-black text-slate-800">No tickets found</h3>
                       </div>
                     ) : (
                       complaints.map((item) => {
-                        const stages = ['Open', 'In Progress', 'Resolved'];
-                        const currentStageIndex = stages.indexOf(item.status);
+                        const stages = ['Open', 'Assigned', 'In Progress', 'Resolved'];
+                        const currentStageIndex = getStageIndex(item.status);
 
                         return (
                           <div key={item.id} className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-sm space-y-6 hover:shadow-md transition-shadow">
@@ -426,6 +443,7 @@ const Dashboard = () => {
                               </div>
                             </div>
 
+                            {/* Multi-Stage Tracker */}
                             <div className="pt-6 border-t border-slate-100 flex items-center justify-between max-w-lg mx-auto w-full px-4">
                               {stages.map((stage, idx) => {
                                 const isCompleted = currentStageIndex >= idx;
@@ -457,7 +475,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* ================= SOS EMERGENCY TAB ================= */}
+              {/* SOS EMERGENCY TAB */}
               {activeTab === 'SOS Emergency' && (
                 <div className="space-y-6">
                   <div className="p-8 rounded-[2.5rem] bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden">
@@ -492,15 +510,15 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* ================= RESIDENT PORTAL INTEGRATION ================= */}
+              {/* RESIDENT PORTAL INTEGRATION */}
               {(activeTab === 'Resident Portal' || activeTab === 'Profile') && (
-                <ResidentPortal 
-                  userData={userData} 
-                  isLoadingProfile={isLoadingProfile} 
-                  requestedView={activeTab === 'Profile' ? 'profile' : 'grid'} 
-                />
+                <ResidentPortal userData={userData} isLoadingProfile={isLoadingProfile} requestedView={activeTab === 'Profile' ? 'profile' : 'grid'} />
               )}
 
+              {/* INFORMATION CENTER INTEGRATION */}
+              {activeTab === 'Information Center' && <InformationCenter />}
+              
+              {/* MICROSERVICE PLACEHOLDERS */}
               {['AI Chatbot', 'Notifications', 'NLP Text Routing', 'Damage Detection (CV)', 'Priority Prediction', 'Fake/Duplicate Detect', 'Resolution Estimator', 'Complaint Heatmap', 'Department Tracking'].includes(activeTab) && (
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
                   <div className="w-20 h-20 bg-slate-200/50 text-slate-400 rounded-full flex items-center justify-center">
@@ -516,13 +534,14 @@ const Dashboard = () => {
         </main>
       </div>
 
+      {/* Ticket Details Modal */}
       <AnimatePresence>
         {isDetailsModalOpen && selectedTicket && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#060D1E]/60 backdrop-blur-md">
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white border border-slate-100 rounded-[2.5rem] p-8 max-w-xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
               <div className="flex justify-between items-start border-b border-slate-100 pb-5 mb-5">
@@ -532,7 +551,7 @@ const Dashboard = () => {
                     <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg">{selectedTicket.category}</span>
                     <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${
                       selectedTicket.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                      selectedTicket.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                      selectedTicket.status === 'In Progress' || selectedTicket.status === 'Assigned' ? 'bg-amber-50 text-amber-600 border-amber-200' :
                       'bg-blue-50 text-blue-600 border-blue-200'
                     }`}>
                       {selectedTicket.status}

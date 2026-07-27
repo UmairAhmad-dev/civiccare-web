@@ -31,8 +31,12 @@ const ComplaintModal = ({ isOpen, onClose, onComplaintSubmitted }) => {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+        // Convert Blob to Base64 so it can be saved in PostgreSQL
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          setAudioUrl(reader.result);
+        };
       };
 
       mediaRecorderRef.current.start();
@@ -98,6 +102,7 @@ const ComplaintModal = ({ isOpen, onClose, onComplaintSubmitted }) => {
         onComplaintSubmitted(result.data);
         onClose();
         
+        // Reset inputs
         setDescription('');
         setImage(null);
         setAudioUrl(null);

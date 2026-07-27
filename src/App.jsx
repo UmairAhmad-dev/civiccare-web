@@ -6,6 +6,7 @@ import ResetPassword from './pages/ResetPassword';
 import ProfileSetup from './pages/ProfileSetup'; 
 import UserProfile from './pages/UserProfile'; 
 import Dashboard from './pages/Dashboard';   
+import AdminDashboard from './pages/AdminDashboard'; // Added Admin Dashboard Import
 
 // A simple wrapper to check for a token before rendering private routes
 const ProtectedRoute = ({ children }) => {
@@ -53,6 +54,16 @@ function App() {
                 </ProtectedRoute>
               } 
             /> 
+            
+            {/* Dedicated Admin Route */}
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
                        
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/login" replace />} />
