@@ -19,6 +19,7 @@ const AdminDashboard = () => {
   const [notices, setNotices] = useState([]);
   const [residents, setResidents] = useState([]);
   const [taskLogs, setTaskLogs] = useState([]); 
+  const [pendingApprovals, setPendingApprovals] = useState({ vehicles: [], family: [], tenants: [], servants: [] });
 
   // Modal States
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -37,12 +38,16 @@ const AdminDashboard = () => {
 
   const fetchAdminData = async () => {
     setIsLoading(true);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     try {
       if (activeTab === 'Overview') {
         const res = await fetch('http://localhost:5000/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (data.success) setStats(data.data);
+      } else if (activeTab === 'Approvals') {
+        const res = await fetch('http://localhost:5000/api/admin/approvals', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.success) setPendingApprovals(data.data);
       } else if (activeTab === 'Departments') {
         const res = await fetch('http://localhost:5000/api/admin/departments', { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
@@ -58,7 +63,7 @@ const AdminDashboard = () => {
         if (deptData.success) setDepartments(deptData.data || []);
       } else if (activeTab === 'Services Catalog') {
         const [srvRes, deptRes] = await Promise.all([
-          fetch('http://localhost:5000/api/services/public', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('http://localhost:5000/api/admin/services', { headers: { Authorization: `Bearer ${token}` } }), 
           fetch('http://localhost:5000/api/admin/departments', { headers: { Authorization: `Bearer ${token}` } })
         ]);
         const srvData = await srvRes.json();
@@ -97,7 +102,7 @@ const AdminDashboard = () => {
         const data = await res.json();
         if (data.success) setTaskLogs(data.data || []);
       } else if (activeTab === 'Notice Board') {
-        const res = await fetch('http://localhost:5000/api/info/notices', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch('http://localhost:5000/api/admin/notices', { headers: { Authorization: `Bearer ${token}` } }); 
         const data = await res.json();
         if (data.success) setNotices(data.data || []);
       } else if (activeTab === 'Resident Data') {
@@ -112,8 +117,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleApprovalUpdate = async (type, id, newStatus) => {
+    const token = localStorage.getItem('adminToken');
+    try {
+      await fetch(`http://localhost:5000/api/admin/approvals/${type}/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus })
+      });
+      fetchAdminData(); 
+    } catch (error) { console.error(error); }
+  };
+
   const handleStatusUpdate = async (ticketId, newStatus, ticketType) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     const endpoint = ticketType === 'Complaint' ? `/api/admin/complaints/${ticketId}/status` : `/api/admin/service-requests/${ticketId}/status`;
     try {
       await fetch(`http://localhost:5000${endpoint}`, {
@@ -127,7 +144,7 @@ const AdminDashboard = () => {
 
   const handleWorkerAssignment = async (ticketId, workerId, ticketType) => {
     if (!workerId) return;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     const endpoint = ticketType === 'Complaint' ? `/api/admin/assign-complaint` : `/api/admin/assign-service`;
     const bodyPayload = ticketType === 'Complaint' 
       ? { complaintId: ticketId, workerId, departmentId: workers.find(w => w.id === parseInt(workerId))?.departmentId }
@@ -145,7 +162,7 @@ const AdminDashboard = () => {
 
   const handleCreateDepartment = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     try {
       const res = await fetch('http://localhost:5000/api/admin/departments', {
         method: 'POST',
@@ -162,7 +179,7 @@ const AdminDashboard = () => {
 
   const handleCreateService = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     try {
       const res = await fetch('http://localhost:5000/api/admin/services', {
         method: 'POST',
@@ -178,7 +195,7 @@ const AdminDashboard = () => {
 
   const handleAddWorker = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     try {
       const res = await fetch('http://localhost:5000/api/admin/workers', {
         method: 'POST',
@@ -195,7 +212,7 @@ const AdminDashboard = () => {
 
   const handlePostNotice = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken'); 
     try {
       const res = await fetch('http://localhost:5000/api/admin/notices', {
         method: 'POST',
@@ -211,9 +228,9 @@ const AdminDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    window.location.href = '/admin/login';
   };
 
   const getStatusColor = (status) => {
@@ -260,6 +277,7 @@ const AdminDashboard = () => {
             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-4 mb-3">Management Engine</h3>
             {[
               { name: 'Overview', icon: LayoutDashboard },
+              { name: 'Approvals', icon: ClipboardCheck },
               { name: 'Tickets Management', icon: Ticket },
               { name: 'Notice Board', icon: Megaphone },
               { name: 'Departments', icon: Building2 },
@@ -267,12 +285,12 @@ const AdminDashboard = () => {
               { name: 'Workforce', icon: Users },
               { name: 'Task Logs', icon: ClipboardCheck },
               { name: 'Resident Data', icon: ClipboardList },
-            ].map((item) => {
+            ].map((item, idx) => {
               const Icon = item.icon;
               const isActive = activeTab === item.name;
               return (
                 <button
-                  key={item.name}
+                  key={`${item.name}-${idx}`}
                   onClick={() => setActiveTab(item.name)}
                   className={`flex items-center gap-3 w-full p-3.5 rounded-xl transition-all duration-300 font-bold text-sm ${
                     isActive ? 'bg-[#0066FF] text-white shadow-lg translate-x-2' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white hover:translate-x-1'
@@ -359,6 +377,61 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* APPROVALS TAB (NEW) */}
+                  {activeTab === 'Approvals' && (
+                    <div className="space-y-8">
+                      {[
+                        { title: 'Pending Vehicles', type: 'vehicle', data: pendingApprovals.vehicles, cols: ['Plate Number', 'Make/Model'] },
+                        { title: 'Pending Family Members', type: 'family', data: pendingApprovals.family, cols: ['Name', 'Relation'] },
+                        { title: 'Pending Tenants', type: 'tenant', data: pendingApprovals.tenants, cols: ['Name', 'Contact'] },
+                        { title: 'Pending Servants', type: 'servant', data: pendingApprovals.servants, cols: ['Name', 'Role'] }
+                      ].map((section) => (
+                        section.data.length > 0 && (
+                          <div key={section.type} className="bg-white border border-slate-200/80 rounded-[2.5rem] shadow-sm overflow-hidden">
+                            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center">
+                              <h3 className="font-black text-slate-800">{section.title}</h3>
+                              <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs ml-2 font-bold">{section.data.length}</span>
+                            </div>
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                  <th className="p-5 text-xs font-black text-slate-500 uppercase">Requested By</th>
+                                  <th className="p-5 text-xs font-black text-slate-500 uppercase">{section.cols[0]}</th>
+                                  <th className="p-5 text-xs font-black text-slate-500 uppercase">{section.cols[1]}</th>
+                                  <th className="p-5 text-xs font-black text-slate-500 uppercase text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {section.data.map((item) => (
+                                  <tr key={item.id} className="hover:bg-slate-50/50">
+                                    <td className="p-5 font-bold text-slate-900">{item.user?.fullName}</td>
+                                    <td className="p-5 text-sm font-bold text-slate-600">
+                                      {section.type === 'vehicle' ? item.plateNumber : item.fullName}
+                                    </td>
+                                    <td className="p-5 text-sm text-slate-500">
+                                      {section.type === 'vehicle' ? `${item.make} ${item.model}` : section.type === 'family' ? item.relation : section.type === 'servant' ? item.role : item.contact}
+                                    </td>
+                                    <td className="p-5 flex justify-end gap-2">
+                                      <button onClick={() => handleApprovalUpdate(section.type, item.id, 'Rejected')} className="px-4 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-xs font-black hover:bg-rose-500 hover:text-white transition-colors">Reject</button>
+                                      <button onClick={() => handleApprovalUpdate(section.type, item.id, 'Approved')} className="px-4 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-black hover:bg-emerald-500 hover:text-white transition-colors">Approve</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      ))}
+
+                      {pendingApprovals.vehicles.length === 0 && pendingApprovals.family.length === 0 && pendingApprovals.tenants.length === 0 && pendingApprovals.servants.length === 0 && (
+                        <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-300 shadow-sm">
+                          <ClipboardCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-500 font-bold">No pending approvals required at the moment.</p>
+                        </div>
+                      )}
                     </div>
                   )}
 

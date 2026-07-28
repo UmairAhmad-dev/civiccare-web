@@ -3,25 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Car, UserCheck, Key, FileBadge, 
   Plus, ArrowLeft, Trash2, CheckCircle2, AlertTriangle, 
-  User, Phone, MapPin, X, Edit2, Target 
+  User, Phone, MapPin, X, Edit2, Target,
+  XCircle, ShieldAlert, Clock // NEW ICONS ADDED
 } from 'lucide-react';
 
 const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) => {
-  // Initialize with the requested view from the Dashboard
   const [activeView, setActiveView] = useState(requestedView);
   const [portfolio, setPortfolio] = useState({ familyMembers: [], vehicles: [], tenants: [], servants: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [inlineMessage, setInlineMessage] = useState(null); 
   
-  // Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
-
-  // Inline Delete Confirmation State
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  // Listen for navigation changes from the parent Dashboard (Navbar vs Sidebar clicks)
   useEffect(() => {
     setActiveView(requestedView);
   }, [requestedView]);
@@ -125,6 +121,17 @@ const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) 
     }
   };
 
+  // --- NEW: Helper to render beautiful status badges ---
+  const renderStatusBadge = (status) => {
+    if (status === 'Approved') {
+      return <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-black border border-emerald-200 uppercase tracking-widest"><CheckCircle2 size={12}/> Approved</span>;
+    } else if (status === 'Rejected') {
+      return <span className="flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-md text-[10px] font-black border border-rose-200 uppercase tracking-widest"><XCircle size={12}/> Rejected</span>;
+    } else {
+      return <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md text-[10px] font-black border border-amber-200 uppercase tracking-widest"><Clock size={12} className="animate-spin-slow"/> Pending Approval</span>;
+    }
+  };
+
   const renderProfileUI = () => (
     <div className="space-y-8">
       {isLoadingProfile ? (
@@ -188,6 +195,18 @@ const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) 
   const renderModuleView = (moduleId, title, Icon, colorClass, bgClass, apiCategory, dataArray, formInputs) => {
     return (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white border border-slate-200/80 p-8 rounded-[2.5rem] shadow-sm max-w-5xl mx-auto">
+        
+        {/* NEW: Inline Security Policy Banner for Modules */}
+        <div className="bg-blue-50 border border-blue-200 p-5 rounded-3xl flex items-start gap-4 mb-8 shadow-sm">
+          <ShieldAlert className="text-blue-600 mt-0.5 shrink-0" size={24} />
+          <div>
+            <h3 className="font-black text-blue-900 text-sm">Administrative Security Policy</h3>
+            <p className="text-xs text-blue-800 mt-1 font-medium leading-relaxed">
+              All newly submitted {title.toLowerCase()} records are marked as <span className="bg-white px-1.5 py-0.5 rounded font-bold text-blue-900 shadow-sm">Pending Approval</span>. The data will become officially active in the municipal registry only after an administrator reviews and approves it.
+            </p>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-slate-100 pb-6">
           <div className="flex items-center gap-4">
             <button 
@@ -260,7 +279,7 @@ const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) 
                   Cancel
                 </button>
                 <button type="submit" className="px-8 py-3 text-white font-black rounded-xl shadow-lg transition-all hover:-translate-y-1 bg-[#0066FF] hover:bg-blue-700 flex items-center gap-2">
-                  <CheckCircle2 size={18} /> {editingId ? 'Save Changes' : 'Submit Record'}
+                  <CheckCircle2 size={18} /> {editingId ? 'Save Changes' : 'Submit for Approval'}
                 </button>
               </div>
             </motion.form>
@@ -289,15 +308,18 @@ const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) 
                            </div>
                         </div>
                         
-                        <div className="flex transition-opacity gap-2">
+                        <div className="flex transition-opacity gap-2 items-center">
+                          {/* NEW: Render Status Badge */}
+                          {renderStatusBadge(item.status)}
+
                           {deleteConfirmId === item.id ? (
-                            <div className="flex items-center gap-2 bg-rose-50 p-1.5 rounded-xl border border-rose-200">
+                            <div className="flex items-center gap-2 bg-rose-50 p-1.5 rounded-xl border border-rose-200 ml-2">
                                <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest px-2">Delete?</span>
                                <button onClick={() => executeDelete(apiCategory, item.id)} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors">Yes</button>
                                <button onClick={() => setDeleteConfirmId(null)} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors">No</button>
                             </div>
                           ) : (
-                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-2 ml-2">
                               <button onClick={() => openEditForm(item)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors" title="Edit">
                                 <Edit2 size={16} />
                               </button>
@@ -374,6 +396,18 @@ const ResidentPortal = ({ userData, isLoadingProfile, requestedView = 'grid' }) 
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white border border-slate-200/80 p-8 md:p-10 rounded-[2.5rem] shadow-sm max-w-4xl mx-auto">
+      
+      {/* NEW: Global Security Banner on Grid View */}
+      <div className="bg-blue-50 border border-blue-200 p-5 rounded-3xl flex items-start gap-4 mb-8 shadow-sm">
+        <ShieldAlert className="text-blue-600 mt-0.5 shrink-0" size={24} />
+        <div>
+          <h3 className="font-black text-blue-900 text-sm">Administrative Security Policy</h3>
+          <p className="text-xs text-blue-800 mt-1 font-medium leading-relaxed">
+            All newly added vehicles, family members, tenants, and staff are subject to administrative review. Data will remain marked as <span className="bg-white px-1.5 py-0.5 rounded font-bold text-blue-900 shadow-sm">Pending Approval</span> until verified by an official.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 border-b border-slate-100 pb-8">
         <div className="flex items-center gap-5">
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-[1.25rem] shadow-sm">

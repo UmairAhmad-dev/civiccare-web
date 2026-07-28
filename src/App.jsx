@@ -6,12 +6,25 @@ import ResetPassword from './pages/ResetPassword';
 import ProfileSetup from './pages/ProfileSetup'; 
 import UserProfile from './pages/UserProfile'; 
 import Dashboard from './pages/Dashboard';   
-import AdminDashboard from './pages/AdminDashboard'; // Added Admin Dashboard Import
+import AdminDashboard from './pages/AdminDashboard'; 
+import AdminLogin from './pages/AdminLogin';
+import AdminRegister from './pages/AdminRegister';
 
-// A simple wrapper to check for a token before rendering private routes
+// ==========================================
+// CITIZEN ROUTE GUARD
+// ==========================================
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = !!localStorage.getItem('token');
   return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// ==========================================
+// SECURE ADMIN ROUTE GUARD
+// ==========================================
+// This strictly checks for an adminToken. Regular citizens cannot bypass this.
+const AdminProtectedRoute = ({ children }) => {
+  const adminToken = !!localStorage.getItem('adminToken');
+  return adminToken ? children : <Navigate to="/admin/login" replace />;
 };
 
 function App() {
@@ -20,16 +33,20 @@ function App() {
       <div className="min-h-screen bg-[#060D1E] flex flex-col font-sans">
         <main className="flex-grow">
           <Routes>
-            {/* Default route redirects to login */}
+            {/* Default route redirects to citizen login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             
-            {/* Public Authentication Routes */}
+            {/* ========================================== */}
+            {/* PUBLIC CITIZEN AUTH ROUTES                 */}
+            {/* ========================================== */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             
-            {/* Protected Routes (Secured by Router-Level Guard) */}
+            {/* ========================================== */}
+            {/* PROTECTED CITIZEN ROUTES                   */}
+            {/* ========================================== */}
             <Route 
               path="/profile-setup" 
               element={
@@ -55,17 +72,25 @@ function App() {
               } 
             /> 
             
-            {/* Dedicated Admin Route */}
+            {/* ========================================== */}
+            {/* STRICTLY SECURE ADMIN ROUTES               */}
+            {/* ========================================== */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/register" element={<AdminRegister />} />
+            
             <Route 
-              path="/admin" 
+              path="/admin/dashboard" 
               element={
-                <ProtectedRoute>
+                <AdminProtectedRoute>
                   <AdminDashboard />
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               } 
             />
+
+            {/* Redirect /admin directly to the secure dashboard */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                        
-            {/* Catch-all route */}
+            {/* Catch-all route defaults to citizen login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
